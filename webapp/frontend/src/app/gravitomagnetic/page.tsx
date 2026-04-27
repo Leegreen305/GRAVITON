@@ -1,179 +1,136 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
-import { Atom, Timer, Clock } from "lucide-react";
-import Plot from "../../components/PlotWrapper";
-import { darkLayout, cyanColorscale } from "../../components/PlotWrapper";
-import { MetricCard, ParamSlider, GlassPanel, PageHeader, LoadingOverlay } from "../../components/ui";
-import { fetchAPI, formatScientific } from "../../lib/api";
-
-interface GEMData {
-    Eg_magnitude: number;
-    Bg_magnitude: number;
-    lt_precession_rate: number;
-    time_dilation: number;
-    Eg_field: number[][];
-    Bg_field: number[][];
-    x_coords: number[];
-    y_coords: number[];
-}
+import { useState, useEffect, useRef } from "react";
+import Plot from "@/components/PlotWrapper";
+import { darkLayout, blueScale, heatScale } from "@/components/PlotWrapper";
+import { PageHeader, ParamSlider, MetricCard, Panel, LoadingOverlay, Divider } from "@/components/ui";
+import { fetchAPI, formatScientific } from "@/lib/api";
 
 const presets = [
-    { name: "Earth", mass: 5.972e24, radius: 6.371e6, J: 7.07e33 },
-    { name: "Neutron Star", mass: 2.8e30, radius: 1e4, J: 1e40 },
-    { name: "Black Hole (10 M☉)", mass: 1.989e31, radius: 2.95e4, J: 1e42 },
+    { name: "Earth", mass: 5.97e24, radius: 6.371e6, angular_momentum: 7.07e33 },
+    { name: "Neutron Star", mass: 2.78e30, radius: 1.2e4, angular_momentum: 1.5e40 },
+    { name: "Black Hole 10M\u2609", mass: 1.989e31, radius: 2.95e4, angular_momentum: 6.0e42 },
 ];
 
-export default function GravitomagneticPage() {
-    const [presetIdx, setPresetIdx] = useState(0);
-    const [mass, setMass] = useState(presets[0].mass);
-    const [radius, setRadius] = useState(presets[0].radius);
-    const [angMom, setAngMom] = useState(presets[0].J);
-    const [data, setData] = useState<GEMData | null>(null);
+export default function GravitomageticPage() {
+    const [mass, setMass] = useState(5.97e24);
+    const [radius, setRadius] = useState(6.371e6);
+    const [angMom, setAngMom] = useState(7.07e33);
+    const [activePreset, setActivePreset] = useState(0);
+    const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const applyPreset = (idx: number) => {
-        setPresetIdx(idx);
-        setMass(presets[idx].mass);
-        setRadius(presets[idx].radius);
-        setAngMom(presets[idx].J);
-    };
-
-    const compute = useCallback(async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const result = await fetchAPI<GEMData>("/api/gravitomagnetic", {
-                mass, radius, angular_momentum_z: angMom,
-            });
-            setData(result);
-        } catch (e: unknown) {
-            setError(e instanceof Error ? e.message : "Computation failed");
-        } finally {
-            setLoading(false);
-        }
-    }, [mass, radius, angMom]);
+    function applyPreset(i: number) {
+        setActivePreset(i);
+        setMass(presets[i].mass);
+        setRadius(presets[i].radius);
+        setAngMom(presets[i].angular_momentum);
+    }
 
     useEffect(() => {
-        const timer = setTimeout(compute, 400);
-        return () => clearTimeout(timer);
-    }, [compute]);
+        if (timer.current) clearTimeout(timer.current);
+        timer.current = setTimeout(async () => {
+            setLoading(true);
+            try {
+                const res = await fetchAPI("/api/gravitomagnetic", { mass, radius, angular_momentum: angMom });
+                setData(res);
+            } catch { }
+            setLoading(false);
+        }, 500);
+        return () => { if (timer.current) clearTimeout(timer.current); };
+    }, [mass, radius, angMom]);
 
     return (
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+        <div className="max-w-[1100px] animate-in">
             <PageHeader
                 title="Gravitoelectromagnetism"
-                subtitle="Linearized GR: Maxwell-like equations for gravity"
-                equation="F = m(E_g + v × B_g)"
+                subtitle="Linearized GR field equations"
+                equation="F = m(E\u2091 + v \u00d7 B\u2091)"
             />
 
-            <div className="grid grid-cols-12 gap-5">
-                <div className="col-span-3">
-                    <GlassPanel className="space-y-6">
-                        <h3 className="text-xs font-bold uppercase tracking-widest text-white/30">Presets</h3>
-                        <div className="flex gap-2 flex-wrap">
+            <div className="grid grid-cols-[240px_1fr] gap-5">
+                {/* Controls */}
+                <div className="space-y-4">
+                    <Panel>
+                        <p className="section-label mb-3">Presets</p>
+                        <div className="flex flex-wrap gap-1.5">
                             {presets.map((p, i) => (
                                 <button
-                                    key={i}
+                                    key={p.name}
                                     onClick={() => applyPreset(i)}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${presetIdx === i
-                                            ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
-                                            : "bg-white/[0.03] text-white/40 border border-white/[0.06] hover:text-white/60"
-                                        }`}
+                                    className={`preset-pill ${activePreset === i ? "preset-pill-active" : ""}`}
                                 >
                                     {p.name}
                                 </button>
                             ))}
                         </div>
+                    </Panel>
 
-                        <div className="glow-line" />
-                        <h3 className="text-xs font-bold uppercase tracking-widest text-white/30">Parameters</h3>
-                        <ParamSlider label="Log₁₀ Mass" value={Math.log10(mass)} min={20} max={35} step={0.5} onChange={(v) => setMass(Math.pow(10, v))} formatValue={(v) => `10^${v.toFixed(1)}`} unit="kg" />
-                        <ParamSlider label="Log₁₀ Radius" value={Math.log10(radius)} min={3} max={8} step={0.25} onChange={(v) => setRadius(Math.pow(10, v))} formatValue={(v) => `10^${v.toFixed(1)}`} unit="m" />
-                        <ParamSlider label="Log₁₀ J_z" value={Math.log10(angMom)} min={30} max={45} step={0.5} onChange={(v) => setAngMom(Math.pow(10, v))} formatValue={(v) => `10^${v.toFixed(1)}`} unit="kg m²/s" />
+                    <Panel>
+                        <p className="section-label mb-3">Parameters</p>
+                        <div className="space-y-4">
+                            <ParamSlider label="Mass" value={Math.log10(mass)} min={20} max={35} step={0.1} onChange={(v) => { setMass(10 ** v); setActivePreset(-1); }} formatValue={(v) => `10^${v.toFixed(1)}`} unit="kg" />
+                            <ParamSlider label="Radius" value={Math.log10(radius)} min={3} max={8} step={0.1} onChange={(v) => { setRadius(10 ** v); setActivePreset(-1); }} formatValue={(v) => `10^${v.toFixed(1)}`} unit="m" />
+                            <ParamSlider label="J" value={Math.log10(angMom)} min={30} max={45} step={0.1} onChange={(v) => { setAngMom(10 ** v); setActivePreset(-1); }} formatValue={(v) => `10^${v.toFixed(1)}`} unit="kg\u00b7m\u00b2/s" />
+                        </div>
+                    </Panel>
 
-                        <div className="glow-line" />
-
-                        {data && (
-                            <div className="space-y-3">
-                                <MetricCard label="Gravitoelectric |E_g|" value={formatScientific(data.Eg_magnitude)} unit="m/s²" accent="cyan" icon={<Atom className="w-3.5 h-3.5" />} />
-                                <MetricCard label="Gravitomagnetic |B_g|" value={formatScientific(data.Bg_magnitude)} unit="1/s" accent="cyan" icon={<Atom className="w-3.5 h-3.5" />} />
-                                <MetricCard label="LT Precession" value={formatScientific(data.lt_precession_rate)} unit="rad/s" accent="amber" icon={<Timer className="w-3.5 h-3.5" />} />
-                                <MetricCard label="Time Dilation dτ/dt" value={data.time_dilation.toFixed(12)} accent="green" icon={<Clock className="w-3.5 h-3.5" />} />
-                            </div>
-                        )}
-                    </GlassPanel>
+                    {data && (
+                        <Panel>
+                            <p className="section-label mb-2">Results</p>
+                            <MetricCard label="E\u2091 magnitude" value={formatScientific(data.metrics.Eg_magnitude)} unit="m/s\u00b2" />
+                            <Divider />
+                            <MetricCard label="B\u2091 magnitude" value={formatScientific(data.metrics.Bg_magnitude)} unit="1/s" />
+                            <Divider />
+                            <MetricCard label="LT Precession" value={formatScientific(data.metrics.lense_thirring_rate)} unit="rad/s" />
+                            <Divider />
+                            <MetricCard label="Time Dilation" value={data.metrics.time_dilation_factor?.toFixed(12) ?? "—"} />
+                        </Panel>
+                    )}
                 </div>
 
-                <div className="col-span-9 space-y-5">
-                    {error && (
-                        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">{error}</div>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-5">
-                        <GlassPanel className="relative">
+                {/* Plots */}
+                <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <Panel className="relative">
                             {loading && <LoadingOverlay />}
-                            <h3 className="text-xs font-bold uppercase tracking-widest text-white/30 mb-4">Gravitoelectric Field |E_g|</h3>
+                            <p className="section-label mb-2">|E\u2091| Field</p>
                             {data && (
                                 <Plot
                                     data={[{
-                                        type: "heatmap" as const,
-                                        z: data.Eg_field,
-                                        x: data.x_coords,
-                                        y: data.y_coords,
-                                        colorscale: cyanColorscale,
-                                        showscale: true,
-                                        colorbar: { tickfont: { color: "rgba(255,255,255,0.4)", size: 9 }, thickness: 10 },
+                                        type: "heatmap",
+                                        z: data.Eg_magnitude_grid,
+                                        colorscale: blueScale,
+                                        showscale: false,
                                     }]}
-                                    layout={{
-                                        ...darkLayout,
-                                        height: 400,
-                                        xaxis: { ...darkLayout.xaxis, title: "x [m]" },
-                                        yaxis: { ...darkLayout.yaxis, title: "y [m]", scaleanchor: "x" },
-                                    }}
-                                    config={{ responsive: true }}
-                                    style={{ width: "100%", height: 400 }}
+                                    layout={{ ...darkLayout, height: 300, margin: { l: 32, r: 8, t: 8, b: 32 } }}
+                                    config={{ displayModeBar: false, responsive: true }}
+                                    style={{ width: "100%", height: "300px" }}
                                 />
                             )}
-                        </GlassPanel>
+                        </Panel>
 
-                        <GlassPanel className="relative">
+                        <Panel className="relative">
                             {loading && <LoadingOverlay />}
-                            <h3 className="text-xs font-bold uppercase tracking-widest text-white/30 mb-4">Gravitomagnetic Field |B_g|</h3>
+                            <p className="section-label mb-2">|B\u2091| Field</p>
                             {data && (
                                 <Plot
                                     data={[{
-                                        type: "heatmap" as const,
-                                        z: data.Bg_field,
-                                        x: data.x_coords,
-                                        y: data.y_coords,
-                                        colorscale: [
-                                            [0, "#0a0a14"],
-                                            [0.2, "#1a0040"],
-                                            [0.4, "#4400aa"],
-                                            [0.6, "#8800dd"],
-                                            [0.8, "#cc44ff"],
-                                            [1, "#ffffff"],
-                                        ],
-                                        showscale: true,
-                                        colorbar: { tickfont: { color: "rgba(255,255,255,0.4)", size: 9 }, thickness: 10 },
+                                        type: "heatmap",
+                                        z: data.Bg_magnitude_grid,
+                                        colorscale: heatScale,
+                                        showscale: false,
                                     }]}
-                                    layout={{
-                                        ...darkLayout,
-                                        height: 400,
-                                        xaxis: { ...darkLayout.xaxis, title: "x [m]" },
-                                        yaxis: { ...darkLayout.yaxis, title: "y [m]", scaleanchor: "x" },
-                                    }}
-                                    config={{ responsive: true }}
-                                    style={{ width: "100%", height: 400 }}
+                                    layout={{ ...darkLayout, height: 300, margin: { l: 32, r: 8, t: 8, b: 32 } }}
+                                    config={{ displayModeBar: false, responsive: true }}
+                                    style={{ width: "100%", height: "300px" }}
                                 />
                             )}
-                        </GlassPanel>
+                        </Panel>
                     </div>
                 </div>
             </div>
-        </motion.div>
+        </div>
     );
 }

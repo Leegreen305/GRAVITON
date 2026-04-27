@@ -1,183 +1,151 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
-import { Orbit, CircleDot, Target } from "lucide-react";
-import Plot from "../../components/PlotWrapper";
-import { darkLayout } from "../../components/PlotWrapper";
-import { MetricCard, ParamSlider, GlassPanel, PageHeader, LoadingOverlay } from "../../components/ui";
-import { fetchAPI, formatScientific } from "../../lib/api";
-
-interface GeodesicData {
-    orbit_x: number[];
-    orbit_y: number[];
-    orbit_r: number[];
-    orbit_phi: number[];
-    potential_r: number[];
-    potential_V: number[];
-    isco: number;
-    schwarzschild_radius: number;
-    metric_type: string;
-    outer_horizon?: number;
-    inner_horizon?: number;
-}
+import { useState, useEffect, useRef } from "react";
+import Plot from "@/components/PlotWrapper";
+import { darkLayout } from "@/components/PlotWrapper";
+import { PageHeader, ParamSlider, MetricCard, Panel, LoadingOverlay, Divider } from "@/components/ui";
+import { fetchAPI, formatScientific } from "@/lib/api";
 
 export default function GeodesicPage() {
-    const [massSolar, setMassSolar] = useState(10);
-    const [spin, setSpin] = useState(0);
-    const [rFactor, setRFactor] = useState(10);
-    const [nOrbits, setNOrbits] = useState(5);
-    const [data, setData] = useState<GeodesicData | null>(null);
+    const [mass, setMass] = useState(10);
+    const [spin, setSpin] = useState(0.0);
+    const [r0, setR0] = useState(12);
+    const [orbits, setOrbits] = useState(5);
+    const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    const compute = useCallback(async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const result = await fetchAPI<GeodesicData>("/api/geodesic", {
-                mass_solar: massSolar,
-                spin,
-                r_init_factor: rFactor,
-                phi_init: 0,
-                n_orbits: nOrbits,
-            });
-            setData(result);
-        } catch (e: unknown) {
-            setError(e instanceof Error ? e.message : "Computation failed");
-        } finally {
-            setLoading(false);
-        }
-    }, [massSolar, spin, rFactor, nOrbits]);
+    const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
-        const timer = setTimeout(compute, 500);
-        return () => clearTimeout(timer);
-    }, [compute]);
+        if (timer.current) clearTimeout(timer.current);
+        timer.current = setTimeout(async () => {
+            setLoading(true);
+            try {
+                const res = await fetchAPI("/api/geodesic", {
+                    mass_solar: mass, spin_parameter: spin, initial_r_over_rs: r0, num_orbits: orbits,
+                });
+                setData(res);
+            } catch { }
+            setLoading(false);
+        }, 500);
+        return () => { if (timer.current) clearTimeout(timer.current); };
+    }, [mass, spin, r0, orbits]);
 
     return (
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+        <div className="max-w-[1100px] animate-in">
             <PageHeader
                 title="Geodesic Motion"
-                subtitle="Schwarzschild and Kerr black hole orbits"
-                equation="d²xᵘ/dτ² + Γᵘₐᵦ dxᵃ/dτ dxᵦ/dτ = 0"
+                subtitle="Schwarzschild & Kerr black hole orbits"
+                equation="d\u00b2x\u1d58/d\u03c4\u00b2 + \u0393\u1d58\u2090\u1d66 dx\u1d43dx\u1d47/d\u03c4\u00b2 = 0"
             />
 
-            <div className="grid grid-cols-12 gap-5">
-                <div className="col-span-3">
-                    <GlassPanel className="space-y-6">
-                        <h3 className="text-xs font-bold uppercase tracking-widest text-white/30">Parameters</h3>
-                        <ParamSlider label="Mass" value={massSolar} min={1} max={100} step={1} onChange={setMassSolar} unit="M☉" />
-                        <ParamSlider
-                            label="Spin a*"
-                            value={spin}
-                            min={0}
-                            max={0.99}
-                            step={0.01}
-                            onChange={setSpin}
-                            formatValue={(v) => v === 0 ? "0 (Schwarzschild)" : v.toFixed(2)}
-                        />
-                        <ParamSlider label="Initial r / r_s" value={rFactor} min={4} max={30} step={1} onChange={setRFactor} />
-                        <ParamSlider label="Orbits" value={nOrbits} min={1} max={20} step={1} onChange={setNOrbits} />
+            <div className="grid grid-cols-[240px_1fr] gap-5">
+                {/* Controls */}
+                <div className="space-y-4">
+                    <Panel>
+                        <p className="section-label mb-3">Parameters</p>
+                        <div className="space-y-4">
+                            <ParamSlider label="Mass" value={mass} min={1} max={100} step={1} unit="M\u2609" onChange={setMass} />
+                            <ParamSlider label="Spin a/M" value={spin} min={0} max={0.99} step={0.01} onChange={setSpin} />
+                            <ParamSlider label="Initial r/r\u209b" value={r0} min={4} max={30} step={0.5} onChange={setR0} />
+                            <ParamSlider label="Orbits" value={orbits} min={1} max={20} step={1} onChange={setOrbits} />
+                        </div>
+                    </Panel>
 
-                        <div className="glow-line" />
-
-                        {data && (
-                            <div className="space-y-3">
-                                <MetricCard label="Metric" value={data.metric_type} accent="cyan" icon={<Orbit className="w-3.5 h-3.5" />} />
-                                <MetricCard label="ISCO" value={formatScientific(data.isco)} unit="m" accent="amber" icon={<Target className="w-3.5 h-3.5" />} />
-                                <MetricCard label="Schwarzschild r_s" value={formatScientific(data.schwarzschild_radius)} unit="m" accent="cyan" icon={<CircleDot className="w-3.5 h-3.5" />} />
-                                {data.outer_horizon !== undefined && data.outer_horizon !== null && (
-                                    <MetricCard label="Outer Horizon r₊" value={formatScientific(data.outer_horizon)} unit="m" accent="red" />
-                                )}
-                                {data.inner_horizon !== undefined && data.inner_horizon !== null && (
-                                    <MetricCard label="Inner Horizon r₋" value={formatScientific(data.inner_horizon)} unit="m" accent="amber" />
-                                )}
-                            </div>
-                        )}
-                    </GlassPanel>
+                    {data && (
+                        <Panel>
+                            <p className="section-label mb-2">Results</p>
+                            <MetricCard label="Metric" value={data.metrics.metric_type} />
+                            <Divider />
+                            <MetricCard label="ISCO" value={formatScientific(data.metrics.isco_radius)} unit="m" />
+                            <Divider />
+                            <MetricCard label="Schwarzschild r\u209b" value={formatScientific(data.metrics.schwarzschild_radius)} unit="m" />
+                            {data.metrics.horizons && (
+                                <>
+                                    <Divider />
+                                    <MetricCard label="r+" value={formatScientific(data.metrics.horizons.r_plus)} unit="m" />
+                                    <Divider />
+                                    <MetricCard label="r\u2013" value={formatScientific(data.metrics.horizons.r_minus)} unit="m" />
+                                </>
+                            )}
+                        </Panel>
+                    )}
                 </div>
 
-                <div className="col-span-9 space-y-5">
-                    {error && (
-                        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">{error}</div>
-                    )}
-
-                    {/* Orbit Plot */}
-                    <GlassPanel className="relative">
+                {/* Plots */}
+                <div className="space-y-4">
+                    <Panel className="relative">
                         {loading && <LoadingOverlay />}
-                        <h3 className="text-xs font-bold uppercase tracking-widest text-white/30 mb-4">Equatorial Orbit</h3>
+                        <p className="section-label mb-2">Orbit Trajectory</p>
                         {data && (
                             <Plot
                                 data={[
                                     {
-                                        type: "scatter" as const,
+                                        type: "scatter",
                                         x: data.orbit_x,
                                         y: data.orbit_y,
-                                        mode: "lines" as const,
-                                        line: { color: "#06b6d4", width: 1.5 },
+                                        mode: "lines",
+                                        line: { color: "#3b82f6", width: 1 },
                                         name: "Orbit",
                                     },
                                     {
-                                        type: "scatter" as const,
-                                        x: [0],
-                                        y: [0],
-                                        mode: "markers" as const,
-                                        marker: { color: "#ffffff", size: 8, symbol: "circle" },
-                                        name: "Black Hole",
+                                        type: "scatter",
+                                        x: [0], y: [0],
+                                        mode: "markers",
+                                        marker: { color: "#ffffff", size: 6, symbol: "circle" },
+                                        name: "BH",
+                                        showlegend: false,
                                     },
                                 ]}
                                 layout={{
                                     ...darkLayout,
-                                    height: 450,
-                                    xaxis: { ...darkLayout.xaxis, title: "x [m]", scaleanchor: "y" },
-                                    yaxis: { ...darkLayout.yaxis, title: "y [m]" },
-                                    showlegend: true,
+                                    height: 360,
+                                    xaxis: { ...darkLayout.xaxis, scaleanchor: "y", title: { text: "x (m)", font: { size: 9, color: "rgba(255,255,255,0.2)" } } },
+                                    yaxis: { ...darkLayout.yaxis, title: { text: "y (m)", font: { size: 9, color: "rgba(255,255,255,0.2)" } } },
+                                    showlegend: false,
                                 }}
-                                config={{ responsive: true }}
-                                style={{ width: "100%", height: 450 }}
+                                config={{ displayModeBar: false, responsive: true }}
+                                style={{ width: "100%", height: "360px" }}
                             />
                         )}
-                    </GlassPanel>
+                    </Panel>
 
-                    {/* Effective Potential */}
-                    <GlassPanel className="relative">
-                        {loading && <LoadingOverlay />}
-                        <h3 className="text-xs font-bold uppercase tracking-widest text-white/30 mb-4">Effective Potential V_eff(r)</h3>
+                    <Panel className="relative">
+                        <p className="section-label mb-2">Effective Potential</p>
                         {data && (
                             <Plot
                                 data={[
                                     {
-                                        type: "scatter" as const,
+                                        type: "scatter",
                                         x: data.potential_r,
                                         y: data.potential_V,
-                                        mode: "lines" as const,
-                                        line: { color: "#f59e0b", width: 2 },
+                                        mode: "lines",
+                                        line: { color: "#a855f7", width: 1.5 },
                                         name: "V_eff",
                                     },
-                                    {
+                                    ...(data.isco_line ? [{
                                         type: "scatter" as const,
-                                        x: [data.isco, data.isco],
+                                        x: [data.isco_line, data.isco_line],
                                         y: [Math.min(...data.potential_V), Math.max(...data.potential_V)],
                                         mode: "lines" as const,
-                                        line: { color: "#ef4444", width: 1, dash: "dash" },
+                                        line: { color: "rgba(255,255,255,0.12)", width: 1, dash: "dot" as const },
                                         name: "ISCO",
-                                    },
+                                        showlegend: false,
+                                    }] : []),
                                 ]}
                                 layout={{
                                     ...darkLayout,
-                                    height: 320,
-                                    xaxis: { ...darkLayout.xaxis, title: "r [m]" },
-                                    yaxis: { ...darkLayout.yaxis, title: "V_eff [J/kg]" },
-                                    showlegend: true,
+                                    height: 240,
+                                    xaxis: { ...darkLayout.xaxis, title: { text: "r (m)", font: { size: 9, color: "rgba(255,255,255,0.2)" } } },
+                                    yaxis: { ...darkLayout.yaxis, title: { text: "V_eff", font: { size: 9, color: "rgba(255,255,255,0.2)" } } },
+                                    showlegend: false,
                                 }}
-                                config={{ responsive: true }}
-                                style={{ width: "100%", height: 320 }}
+                                config={{ displayModeBar: false, responsive: true }}
+                                style={{ width: "100%", height: "240px" }}
                             />
                         )}
-                    </GlassPanel>
+                    </Panel>
                 </div>
             </div>
-        </motion.div>
+        </div>
     );
 }

@@ -7,41 +7,43 @@ const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 export const darkLayout = {
     paper_bgcolor: "rgba(0,0,0,0)",
     plot_bgcolor: "rgba(0,0,0,0)",
-    font: { color: "rgba(255,255,255,0.6)", family: "JetBrains Mono, monospace", size: 11 },
-    margin: { l: 50, r: 20, t: 30, b: 50 },
+    font: { color: "rgba(255,255,255,0.35)", family: "'JetBrains Mono', monospace", size: 10 },
+    margin: { l: 44, r: 16, t: 20, b: 40 },
     xaxis: {
-        gridcolor: "rgba(255,255,255,0.04)",
-        zerolinecolor: "rgba(255,255,255,0.08)",
-        tickfont: { size: 10 },
+        gridcolor: "rgba(255,255,255,0.025)",
+        zerolinecolor: "rgba(255,255,255,0.04)",
+        tickfont: { size: 9, color: "rgba(255,255,255,0.25)" },
+        linecolor: "rgba(255,255,255,0.04)",
     },
     yaxis: {
-        gridcolor: "rgba(255,255,255,0.04)",
-        zerolinecolor: "rgba(255,255,255,0.08)",
-        tickfont: { size: 10 },
+        gridcolor: "rgba(255,255,255,0.025)",
+        zerolinecolor: "rgba(255,255,255,0.04)",
+        tickfont: { size: 9, color: "rgba(255,255,255,0.25)" },
+        linecolor: "rgba(255,255,255,0.04)",
     },
     legend: {
         bgcolor: "rgba(0,0,0,0)",
-        font: { color: "rgba(255,255,255,0.5)", size: 10 },
+        font: { color: "rgba(255,255,255,0.35)", size: 9 },
     },
     modebar: { bgcolor: "rgba(0,0,0,0)" },
 };
 
-export const cyanColorscale: [number, string][] = [
-    [0, "#0a0a14"],
-    [0.2, "#0d1b3e"],
-    [0.4, "#0e3d6b"],
-    [0.6, "#0891b2"],
-    [0.8, "#22d3ee"],
-    [1, "#ffffff"],
+export const blueScale: [number, string][] = [
+    [0, "#0a0b10"],
+    [0.15, "#0f1428"],
+    [0.35, "#132450"],
+    [0.55, "#1d4ed8"],
+    [0.75, "#60a5fa"],
+    [1, "#e0eeff"],
 ];
 
-export const energyColorscale: [number, string][] = [
-    [0, "#0a0a14"],
-    [0.15, "#1e0038"],
-    [0.3, "#5b0099"],
-    [0.5, "#e00060"],
-    [0.7, "#ff6600"],
-    [0.85, "#ffcc00"],
+export const heatScale: [number, string][] = [
+    [0, "#0a0b10"],
+    [0.12, "#1a0828"],
+    [0.28, "#3b0764"],
+    [0.45, "#9333ea"],
+    [0.62, "#e879f9"],
+    [0.8, "#fde68a"],
     [1, "#ffffff"],
 ];
 

@@ -25,9 +25,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} ${jetbrains.variable} h-full antialiased`}>
-      <body className="min-h-full bg-[#0a0a14]">
+      <body className="min-h-full bg-[#08090d]">
         <Sidebar />
-        <main className="ml-[220px] min-h-screen p-8">
+        <main className="ml-[200px] min-h-screen px-6 py-5">
           {children}
         </main>
       </body>
