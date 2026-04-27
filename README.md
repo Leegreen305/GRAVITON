@@ -46,6 +46,48 @@ python -m pytest tests/ -v
 
 ---
 
+## Web Dashboard
+
+A premium enterprise web dashboard built with **Next.js 16 + FastAPI + Plotly** provides an interactive interface to all physics modules. Launch both servers with:
+
+```bash
+python start.py
+```
+
+Then open `http://localhost:3000`.
+
+### Overview
+
+<p align="center">
+  <img src="assets/screenshot-home.png" alt="GRAVITON Dashboard Overview" width="100%">
+</p>
+
+### Alcubierre Warp Drive
+
+<p align="center">
+  <img src="assets/screenshot-alcubierre.png" alt="Alcubierre Warp Drive Module" width="100%">
+</p>
+
+### Gravitoelectromagnetism
+
+<p align="center">
+  <img src="assets/screenshot-gem.png" alt="Gravitoelectromagnetism Module" width="100%">
+</p>
+
+### Zero-Point Energy
+
+<p align="center">
+  <img src="assets/screenshot-zpe.png" alt="Zero-Point Energy Module" width="100%">
+</p>
+
+### Geodesic Motion
+
+<p align="center">
+  <img src="assets/screenshot-geodesic.png" alt="Geodesic Motion Module" width="100%">
+</p>
+
+---
+
 ## Examples
 
 ```bash
