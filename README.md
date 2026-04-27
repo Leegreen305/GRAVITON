@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/banner.png" alt="GRAVITON — Warp Bubble Spacetime Visualization" width="100%">
+</p>
+
 # GRAVITON
 
 ### Exotic Propulsion & Spacetime Engineering Simulator
