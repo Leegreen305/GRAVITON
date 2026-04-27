@@ -19,13 +19,15 @@ export default function AlcubierrePage() {
         timer.current = setTimeout(async () => {
             setLoading(true);
             try {
-                const res = await fetchAPI("/api/alcubierre", { velocity_c: v, radius: R, sigma });
+                const res = await fetchAPI("/api/alcubierre", { velocity: v, radius: R, sigma });
                 setData(res);
             } catch { }
             setLoading(false);
         }, 400);
         return () => { if (timer.current) clearTimeout(timer.current); };
     }, [v, R, sigma]);
+
+    const causal = data?.is_causally_disconnected ? "Disconnected" : "Causal";
 
     return (
         <div className="max-w-[1100px] animate-in">
@@ -36,7 +38,6 @@ export default function AlcubierrePage() {
             />
 
             <div className="grid grid-cols-[240px_1fr] gap-5">
-                {/* Left: Controls + Metrics */}
                 <div className="space-y-4">
                     <Panel>
                         <p className="section-label mb-3">Parameters</p>
@@ -50,24 +51,18 @@ export default function AlcubierrePage() {
                     {data && (
                         <Panel>
                             <p className="section-label mb-2">Results</p>
-                            <MetricCard label="Exotic Energy" value={formatScientific(data.metrics.total_energy)} unit="J" tone="negative" />
+                            <MetricCard label="Exotic Energy" value={formatScientific(data.total_exotic_energy)} unit="J" tone="negative" />
                             <Divider />
-                            <MetricCard label="Pfenning-Ford" value={formatScientific(data.metrics.pfenning_ford_bound)} unit="J" />
+                            <MetricCard label="Pfenning-Ford" value={formatScientific(data.pfenning_ford_bound)} unit="J" />
                             <Divider />
-                            <MetricCard label="Hawking Temp" value={formatScientific(data.metrics.hawking_temperature)} unit="K" tone="caution" />
+                            <MetricCard label="Hawking Temp" value={formatScientific(data.hawking_temperature)} unit="K" tone="caution" />
                             <Divider />
-                            <MetricCard
-                                label="Causality"
-                                value={data.metrics.causal_status}
-                                tone={data.metrics.causal_status === "Causal" ? "positive" : "negative"}
-                            />
+                            <MetricCard label="Causality" value={causal} tone={causal === "Causal" ? "positive" : "negative"} />
                         </Panel>
                     )}
                 </div>
 
-                {/* Right: Plots */}
                 <div className="space-y-4">
-                    {/* 3D Surface */}
                     <Panel className="relative">
                         {loading && <LoadingOverlay />}
                         <p className="section-label mb-2">Expansion Scalar \u03b8</p>
@@ -98,7 +93,6 @@ export default function AlcubierrePage() {
                     </Panel>
 
                     <div className="grid grid-cols-2 gap-4">
-                        {/* Energy Density Heatmap */}
                         <Panel className="relative">
                             <p className="section-label mb-2">Energy Density</p>
                             {data && (
@@ -116,14 +110,14 @@ export default function AlcubierrePage() {
                             )}
                         </Panel>
 
-                        {/* Shape Function */}
                         <Panel className="relative">
                             <p className="section-label mb-2">Shape Function f(r)</p>
                             {data && (
                                 <Plot
                                     data={[{
                                         type: "scatter",
-                                        y: data.shape_function,
+                                        x: data.shape_profile_r,
+                                        y: data.shape_profile_f,
                                         mode: "lines",
                                         line: { color: "#3b82f6", width: 1.5 },
                                         fill: "tozeroy",

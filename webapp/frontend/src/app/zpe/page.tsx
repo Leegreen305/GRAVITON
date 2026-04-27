@@ -17,7 +17,7 @@ export default function ZPEPage() {
         timer.current = setTimeout(async () => {
             setLoading(true);
             try {
-                const res = await fetchAPI("/api/zpe", { plate_separation_nm: separation });
+                const res = await fetchAPI("/api/zpe", { plate_separation: separation * 1e-9 });
                 setData(res);
             } catch { }
             setLoading(false);
@@ -34,7 +34,6 @@ export default function ZPEPage() {
             />
 
             <div className="grid grid-cols-[240px_1fr] gap-5">
-                {/* Controls */}
                 <div className="space-y-4">
                     <Panel>
                         <p className="section-label mb-3">Parameters</p>
@@ -44,22 +43,21 @@ export default function ZPEPage() {
                     {data && (
                         <Panel>
                             <p className="section-label mb-2">Results</p>
-                            <MetricCard label="Casimir Force" value={formatScientific(data.metrics.casimir_force)} unit="N/m\u00b2" />
+                            <MetricCard label="Casimir Force" value={formatScientific(data.casimir_force_pa)} unit="N/m\u00b2" />
                             <Divider />
-                            <MetricCard label="Energy Density" value={formatScientific(data.metrics.energy_density)} unit="J/m\u00b3" tone="negative" />
+                            <MetricCard label="Energy Density" value={formatScientific(data.casimir_energy_density)} unit="J/m\u00b3" tone="negative" />
                             <Divider />
-                            <MetricCard label="ZPE Density" value={formatScientific(data.metrics.zpe_density)} unit="J/m\u00b3" />
+                            <MetricCard label="ZPE Density" value={formatScientific(data.zpe_density)} unit="J/m\u00b3" />
                             <Divider />
-                            <MetricCard label="\u039b Discrepancy" value={formatScientific(data.metrics.cosmological_discrepancy)} tone="caution" />
+                            <MetricCard label="Cosmological \u0394" value={formatScientific(data.cosmological_discrepancy?.discrepancy_factor)} tone="caution" />
                             <Divider />
-                            <MetricCard label="QI Bound" value={formatScientific(data.metrics.quantum_inequality_bound)} unit="J/m\u00b3" />
+                            <MetricCard label="QI Bound" value={formatScientific(data.qi_bound)} unit="J/m\u00b3" />
                             <Divider />
-                            <MetricCard label="Lamoreaux \u0394" value={(data.metrics.lamoreaux_ratio * 100).toFixed(1) + "%"} tone="positive" />
+                            <MetricCard label="Lamoreaux Ratio" value={data.lamoreaux?.ratio?.toFixed(2) ?? "\u2014"} tone="positive" />
                         </Panel>
                     )}
                 </div>
 
-                {/* Plots */}
                 <div className="space-y-4">
                     <Panel className="relative">
                         {loading && <LoadingOverlay />}
@@ -68,8 +66,8 @@ export default function ZPEPage() {
                             <Plot
                                 data={[{
                                     type: "scatter",
-                                    x: data.sweep_separations,
-                                    y: data.sweep_forces,
+                                    x: data.sweep_d,
+                                    y: data.sweep_force,
                                     mode: "lines",
                                     line: { color: "#3b82f6", width: 1.5 },
                                 }]}
@@ -92,8 +90,8 @@ export default function ZPEPage() {
                                 <Plot
                                     data={[{
                                         type: "scatter",
-                                        x: data.sweep_separations,
-                                        y: data.sweep_energies,
+                                        x: data.sweep_d,
+                                        y: data.sweep_energy,
                                         mode: "lines",
                                         line: { color: "#a855f7", width: 1.5 },
                                         fill: "tozeroy",
@@ -118,7 +116,7 @@ export default function ZPEPage() {
                                 <Plot
                                     data={[{
                                         type: "scatter",
-                                        x: data.spectral_frequencies,
+                                        x: data.spectral_omega,
                                         y: data.spectral_density,
                                         mode: "lines",
                                         line: { color: "#f59e0b", width: 1.5 },

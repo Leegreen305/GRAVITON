@@ -21,7 +21,7 @@ export default function GeodesicPage() {
             setLoading(true);
             try {
                 const res = await fetchAPI("/api/geodesic", {
-                    mass_solar: mass, spin_parameter: spin, initial_r_over_rs: r0, num_orbits: orbits,
+                    mass_solar: mass, spin, r_init_factor: r0, n_orbits: orbits,
                 });
                 setData(res);
             } catch { }
@@ -35,11 +35,10 @@ export default function GeodesicPage() {
             <PageHeader
                 title="Geodesic Motion"
                 subtitle="Schwarzschild & Kerr black hole orbits"
-                equation="d\u00b2x\u1d58/d\u03c4\u00b2 + \u0393\u1d58\u2090\u1d66 dx\u1d43dx\u1d47/d\u03c4\u00b2 = 0"
+                equation="d\u00b2x\u1d58/d\u03c4\u00b2 + \u0393\u1d58\u2090\u1d66 dx\u1d43/d\u03c4 dx\u1d47/d\u03c4 = 0"
             />
 
             <div className="grid grid-cols-[240px_1fr] gap-5">
-                {/* Controls */}
                 <div className="space-y-4">
                     <Panel>
                         <p className="section-label mb-3">Parameters</p>
@@ -54,24 +53,27 @@ export default function GeodesicPage() {
                     {data && (
                         <Panel>
                             <p className="section-label mb-2">Results</p>
-                            <MetricCard label="Metric" value={data.metrics.metric_type} />
+                            <MetricCard label="Metric" value={data.metric_type} />
                             <Divider />
-                            <MetricCard label="ISCO" value={formatScientific(data.metrics.isco_radius)} unit="m" />
+                            <MetricCard label="ISCO" value={formatScientific(data.isco)} unit="m" />
                             <Divider />
-                            <MetricCard label="Schwarzschild r\u209b" value={formatScientific(data.metrics.schwarzschild_radius)} unit="m" />
-                            {data.metrics.horizons && (
+                            <MetricCard label="Schwarzschild r\u209b" value={formatScientific(data.schwarzschild_radius)} unit="m" />
+                            {data.outer_horizon != null && (
                                 <>
                                     <Divider />
-                                    <MetricCard label="r+" value={formatScientific(data.metrics.horizons.r_plus)} unit="m" />
+                                    <MetricCard label="r+" value={formatScientific(data.outer_horizon)} unit="m" />
+                                </>
+                            )}
+                            {data.inner_horizon != null && (
+                                <>
                                     <Divider />
-                                    <MetricCard label="r\u2013" value={formatScientific(data.metrics.horizons.r_minus)} unit="m" />
+                                    <MetricCard label="r\u2013" value={formatScientific(data.inner_horizon)} unit="m" />
                                 </>
                             )}
                         </Panel>
                     )}
                 </div>
 
-                {/* Plots */}
                 <div className="space-y-4">
                     <Panel className="relative">
                         {loading && <LoadingOverlay />}
@@ -122,9 +124,9 @@ export default function GeodesicPage() {
                                         line: { color: "#a855f7", width: 1.5 },
                                         name: "V_eff",
                                     },
-                                    ...(data.isco_line ? [{
+                                    ...(data.isco != null ? [{
                                         type: "scatter" as const,
-                                        x: [data.isco_line, data.isco_line],
+                                        x: [data.isco, data.isco],
                                         y: [Math.min(...data.potential_V), Math.max(...data.potential_V)],
                                         mode: "lines" as const,
                                         line: { color: "rgba(255,255,255,0.12)", width: 1, dash: "dot" as const },
